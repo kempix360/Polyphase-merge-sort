@@ -11,9 +11,9 @@ class DataGenerator {
                 int number = rand.nextInt(100) + 1; // generates numbers from range 1-100.
                 writer.write(Integer.toString(number));
                 number = rand.nextInt(100) + 1;
-                writer.write(" " + Integer.toString(number));
+                writer.write(" " + number);
                 number = rand.nextInt(100) + 1;
-                writer.write(" " + Integer.toString(number));
+                writer.write(" " + number);
                 writer.newLine();
             }
         }
@@ -27,9 +27,9 @@ class DataGenerator {
                 int number = scanner.nextInt();
                 writer.write(Integer.toString(number));
                 number = scanner.nextInt();
-                writer.write(" " + Integer.toString(number));
+                writer.write(" " + number);
                 number = scanner.nextInt();
-                writer.write(" " + Integer.toString(number));
+                writer.write(" " + number);
                 writer.newLine();
             }
         }

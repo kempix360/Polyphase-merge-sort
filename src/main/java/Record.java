@@ -1,32 +1,36 @@
 public class Record {
-    private int length;
-    private int width;
-    private int height;
+    private int first;
+    private int second;
+    private int third;
 
     public Record(int length, int width, int height) {
-        this.length = length;
-        this.width = width;
-        this.height = height;
+        this.first = length;
+        this.second = width;
+        this.third = height;
     }
 
-    public int getLength() {
-        return length;
+    public int getFirst() {
+        return first;
     }
 
-    public int getWidth() {
-        return width;
+    public int getSecond() {
+        return second;
     }
 
-    public int getHeight() {
-        return height;
+    public int getThird() {
+        return third;
     }
 
     public int getArea() {
-        return 2 * (length * width + width * height + length * height);
+        return 2 * (first * second + second * third + first * third);
     }
 
     @Override
     public String toString() {
-        return length + " " + width + " " + height;
+        return first + " " + second + " " + third + " Area: " + getArea();
+    }
+
+    public boolean compareTo(Record record2) {
+        return this.getArea() < record2.getArea();
     }
 }

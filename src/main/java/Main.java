@@ -6,7 +6,7 @@ public class Main {
     public static void main(String[] args) throws IOException {
         Scanner scanner = new Scanner(System.in);
         int option;
-
+        RAM ram = new RAM();
         System.out.println("Choose option:");
         System.out.println("1. Generate random data");
         System.out.println("2. Insert data from keyboard");
@@ -25,12 +25,14 @@ public class Main {
             }
         }
 
-        String inputFile = "src\\main\\java\\tapes\\input.txt";
+        String inputFile = "input.txt";
         String tape1File = "src\\main\\java\\tapes\\tape1.txt";
         String tape2File = "src\\main\\java\\tapes\\tape2.txt";
+        String tape3File = "src\\main\\java\\tapes\\tape3.txt";
         new FileWriter(inputFile).close();
         new FileWriter(tape1File).close();
         new FileWriter(tape2File).close();
+        new FileWriter(tape3File).close();
 
         if (option == 1) {
             int n;
@@ -82,17 +84,12 @@ public class Main {
             DataGenerator.generateDataFromFile(inputFile, testFile);
         }
 
+        ram.loadFromFile(inputFile);
+
         System.out.println("Data before sort:");
         printFile(inputFile);
 
-        PolyphaseSort sorter = new PolyphaseSort(inputFile, tape1File, tape2File);
-        sorter.sort();
-        sorter.close();
 
-        System.out.println("Data after sort:");
-        printFile(tape1File);
-
-        sorter.printStats();
     }
 
     private static void printFile(String filename) throws IOException {
