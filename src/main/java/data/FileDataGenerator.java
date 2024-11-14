@@ -6,7 +6,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
-public class FileDataGenerator implements DataGeneratorInterface {
+public class FileDataGenerator implements DataGenerator {
     private final String sourceFile;
 
     public FileDataGenerator(String sourceFile) {

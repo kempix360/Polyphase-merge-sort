@@ -1,12 +1,15 @@
+package memory;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Tape {
     private final String filename;
+    private BlockOfMemory blockOfMemory;
     private BufferedReader reader;
     private BufferedWriter writer;
-    int runCount = 0;
+    public int runCount = 0;
     private int readOperations = 0;
     private int writeOperations = 0;
 

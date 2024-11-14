@@ -1,3 +1,9 @@
+import data.DataGenerator;
+import data.FileDataGenerator;
+import data.KeyboardDataGenerator;
+import data.RandomDataGenerator;
+import memory.RAM;
+
 import java.io.*;
 import java.util.InputMismatchException;
 import java.util.Scanner;
@@ -7,6 +13,16 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         int option;
         RAM ram = new RAM();
+        String inputFile = "input.txt";
+        String tape1File = "src\\main\\java\\tapes\\tape1.txt";
+        String tape2File = "src\\main\\java\\tapes\\tape2.txt";
+        String tape3File = "src\\main\\java\\tapes\\tape3.txt";
+        new FileWriter(inputFile).close();
+        new FileWriter(tape1File).close();
+        new FileWriter(tape2File).close();
+        new FileWriter(tape3File).close();
+
+
         System.out.println("Choose option:");
         System.out.println("1. Generate random data");
         System.out.println("2. Insert data from keyboard");
@@ -24,51 +40,30 @@ public class Main {
                 scanner.next();  // Clear the invalid input from scanner buffer
             }
         }
+        int n;
+        while (true) {
+            try {
+                System.out.print("How much data do you want to generate? ");
+                n = scanner.nextInt();
+                if (n <= 0) {
+                    System.out.println("Please enter a positive number.");
+                } else {
+                    break;  // Valid number, break out of the loop
+                }
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input. Please enter a valid number.");
+                scanner.next();  // Clear invalid input
+            }
+        }
 
-        String inputFile = "input.txt";
-        String tape1File = "src\\main\\java\\tapes\\tape1.txt";
-        String tape2File = "src\\main\\java\\tapes\\tape2.txt";
-        String tape3File = "src\\main\\java\\tapes\\tape3.txt";
-        new FileWriter(inputFile).close();
-        new FileWriter(tape1File).close();
-        new FileWriter(tape2File).close();
-        new FileWriter(tape3File).close();
 
         if (option == 1) {
-            int n;
-            while (true) {
-                try {
-                    System.out.print("How much data do you want to generate? ");
-                    n = scanner.nextInt();
-                    if (n <= 0) {
-                        System.out.println("Please enter a positive number.");
-                    } else {
-                        break;  // Valid number, break out of the loop
-                    }
-                } catch (InputMismatchException e) {
-                    System.out.println("Invalid input. Please enter a valid number.");
-                    scanner.next();  // Clear invalid input
-                }
-            }
-            DataGenerator.generateRandomData(inputFile, n);
+            DataGenerator randomGenerator = new RandomDataGenerator();
+            randomGenerator.generateData(inputFile, n);
 
         } else if (option == 2) {
-            int n;
-            while (true) {
-                try {
-                    System.out.print("How much data do you want to insert? ");
-                    n = scanner.nextInt();
-                    if (n <= 0) {
-                        System.out.println("Please enter a positive number.");
-                    } else {
-                        break;  // Valid number, break out of the loop
-                    }
-                } catch (InputMismatchException e) {
-                    System.out.println("Invalid input. Please enter a valid number.");
-                    scanner.next();  // Clear invalid input
-                }
-            }
-            DataGenerator.generateDataFromKeyboard(inputFile, n);
+            DataGenerator randomGenerator = new KeyboardDataGenerator();
+            randomGenerator.generateData(inputFile, n);
 
         } else {
             String testFile;
@@ -81,10 +76,12 @@ public class Main {
                     break;  // Valid input, break out of the loop
                 }
             }
-            DataGenerator.generateDataFromFile(inputFile, testFile);
+            DataGenerator randomGenerator = new FileDataGenerator(testFile);
+            randomGenerator.generateData(inputFile, n);
         }
 
-        ram.loadFromFile(inputFile);
+        ram.loadToBuffer(inputFile, ram.getBlockInput());
+        ram.writeToFile(inputFile, ram.getBlockInput());
 
         System.out.println("Data before sort:");
         printFile(inputFile);

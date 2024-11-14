@@ -5,7 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Scanner;
 
-public class KeyboardDataGenerator implements DataGeneratorInterface {
+public class KeyboardDataGenerator implements DataGenerator {
     @Override
     public void generateData(String filename, int n) throws IOException {
         Scanner scanner = new Scanner(System.in);

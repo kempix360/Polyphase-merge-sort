@@ -5,7 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Random;
 
-public class RandomDataGenerator implements DataGeneratorInterface {
+public class RandomDataGenerator implements DataGenerator {
     @Override
     public void generateData(String filename, int n) throws IOException {
         Random rand = new Random();

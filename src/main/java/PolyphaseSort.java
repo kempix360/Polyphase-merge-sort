@@ -1,14 +1,16 @@
-import java.io.FileInputStream;
+import memory.BlockOfMemory;
+import memory.RAM;
+import memory.Record;
+import memory.Tape;
+
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 class PolyphaseSort {
-    private String fileToSort = "input.txt";
+    private String fileToSort;
     private Tape tape1;
     private Tape tape2;
     private Tape tape3;
-    private RAM ram = new RAM();
+    private RAM ram;
     private int phaseCount = 0;
     private int totalReadOperations = 0;
     private int totalWriteOperations = 0;
@@ -21,21 +23,25 @@ class PolyphaseSort {
         ram = _ram;
     }
 
-    public void divideIntoTapes(Tape _writeTape1, Tape _writeTape2) throws IOException {
+    public void divideIntoTapes(Tape _tape1, Tape _tape2) throws IOException {
         // _readTape: the tape we are reading from
         // _writeTape1 and _writeTape1: the tapes we are writing to
-        ram.loadFromFile(fileToSort);
-        Record record = ram.getRecordsInMemory().remove(0);
+        BlockOfMemory blockOfMemory = ram.getBlockOfMemory();
         totalReadOperations++;
 
         int fib1 = 1, fib2 = 1;
         int currentFib = fib1;
         int runCount = 0;
         int prevArea = -1;
-        Tape tapeToAdd = _writeTape1;
+        int index = 0;
+        Tape tapeToAdd = _tape1;
 
-        while (record != null) {
+        while (index < blockOfMemory.getSize()) {
+            Record record = readRecordFromBlock(index, blockOfMemory);
+            index += Record.RECORD_SIZE;
             int totalArea = record.getArea();
+
+
             // run.addRecord(record);
             // write to a proper buffer
             totalWriteOperations++;
@@ -45,7 +51,7 @@ class PolyphaseSort {
             }
 
             if (tapeToAdd.runCount == currentFib) {
-                tapeToAdd = (tapeToAdd == _writeTape1) ? _writeTape2 : _writeTape1;
+                tapeToAdd = (tapeToAdd == _tape1) ? _tape2 : _tape1;
 
                 // Update Fibonacci sequence for the next run
                 currentFib = fib1 + fib2;
@@ -55,8 +61,12 @@ class PolyphaseSort {
             }
 
             prevArea = totalArea;
-            record = ram.getRecordsInMemory().remove(0);
             totalReadOperations++;
+
+            if (index == blockOfMemory.getSize()) {
+                ram.loadToBuffer(fileToSort);
+                index = 0;
+            }
         }
 
         while (tapeToAdd.getRunCount() < fib2) {
@@ -71,7 +81,7 @@ class PolyphaseSort {
 
 
     public void sort() throws IOException {
-        divideIntoTapes(initialTape, tape1, tape2);
+        divideIntoTapes(tape1, tape2);
         mergeTapes(tape1, tape2, tape3);
         phaseCount++;
     }
@@ -89,10 +99,11 @@ class PolyphaseSort {
     }
 
     public void close() throws IOException {
-        tape3.close();
         tape1.close();
         tape2.close();
+        tape3.close();
     }
+
 
     // TODO:
     // 1. dividing input into 2 tapes

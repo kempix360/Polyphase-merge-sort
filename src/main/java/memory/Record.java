@@ -1,7 +1,10 @@
+package memory;
+
 public class Record {
-    private int first;
-    private int second;
-    private int third;
+    public static final int RECORD_SIZE = 12;
+    private final int first;
+    private final int second;
+    private final int third;
 
     public Record(int length, int width, int height) {
         this.first = length;
