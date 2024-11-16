@@ -1,81 +1,108 @@
 import memory.BlockOfMemory;
 import memory.RAM;
 import memory.Record;
-import memory.Tape;
+import memory.DiskFile;
 
 import java.io.IOException;
 
 class PolyphaseSort {
-    private String fileToSort;
-    private Tape tape1;
-    private Tape tape2;
-    private Tape tape3;
+    private DiskFile fileToSort;
+    private DiskFile tape1;
+    private DiskFile tape2;
+    private DiskFile tape3;
     private RAM ram;
     private int phaseCount = 0;
     private int totalReadOperations = 0;
     private int totalWriteOperations = 0;
 
     public PolyphaseSort(String _fileToSort, String tape1File, String tape2File, String tape3File, RAM _ram) throws IOException {
-        fileToSort = _fileToSort;
-        tape1 = new Tape(tape1File);
-        tape2 = new Tape(tape2File);
-        tape3 = new Tape(tape3File);
+        fileToSort = new DiskFile(_fileToSort);
+        tape1 = new DiskFile(tape1File);
+        tape2 = new DiskFile(tape2File);
+        tape3 = new DiskFile(tape3File);
         ram = _ram;
     }
 
-    public void divideIntoTapes(Tape _tape1, Tape _tape2) throws IOException {
-        // _readTape: the tape we are reading from
-        // _writeTape1 and _writeTape1: the tapes we are writing to
-        BlockOfMemory blockOfMemory = ram.getBlockOfMemory();
-        totalReadOperations++;
+    public void divideIntoTapes(DiskFile firstTape, DiskFile secondTape) throws IOException {
+        // Initialize buffers for the tapes
+        BlockOfMemory blockFirstTape = new BlockOfMemory();
+        BlockOfMemory blockSecondTape = new BlockOfMemory();
 
-        int fib1 = 1, fib2 = 1;
+        // Load the first block of input data
+        BlockOfMemory blockOfInput = ram.loadToBuffer(fileToSort);
+        if (blockOfInput == null) {
+            throw new IOException("File is empty or cannot be loaded.");
+        }
+
+        int fib1 = 1, fib2 = 1; // Fibonacci sequence initialization
         int currentFib = fib1;
-        int runCount = 0;
-        int prevArea = -1;
-        int index = 0;
-        Tape tapeToAdd = _tape1;
+        int prevArea = -1; // Initialize the previous record's area for run comparison
+        int index = 0; // Index within the current block
+        int counterOfRecords = 0;
+        DiskFile tapeToWrite = firstTape;
 
-        while (index < blockOfMemory.getSize()) {
-            Record record = readRecordFromBlock(index, blockOfMemory);
-            index += Record.RECORD_SIZE;
-            int totalArea = record.getArea();
+        while (blockOfInput != null) {
+            // Process the current block until it's exhausted
+            while (index < blockOfInput.getSize()) {
+                // Read the next record from the current block
+                Record record = ram.readRecordFromBlock(index, blockOfInput);
+                counterOfRecords++;
+                index += Record.RECORD_SIZE;
+                int totalArea = record.getArea();
 
+                // Check for a new run
+                if (totalArea < prevArea) {
+                    tapeToWrite.runCount++;
+                    if (tapeToWrite.runCount == currentFib) {
+                        // Switch to the other tape
+                        tapeToWrite = (tapeToWrite == firstTape) ? secondTape : firstTape;
 
-            // run.addRecord(record);
-            // write to a proper buffer
-            totalWriteOperations++;
+                        // Update Fibonacci sequence
+                        currentFib = fib1 + fib2;
+                        fib1 = fib2;
+                        fib2 = currentFib;
+                    }
+                }
 
-            if (totalArea < prevArea) {
-                tapeToAdd.runCount++;
+                // Write the record to the appropriate tape's buffer
+                BlockOfMemory blockToWrite = (tapeToWrite == firstTape) ? blockFirstTape : blockSecondTape;
+
+                if (blockToWrite.getSize() + Record.RECORD_SIZE > BlockOfMemory.BUFFER_SIZE) {
+                    // Buffer is full: write it to the tape and clear it
+                    ram.writeToFile(tapeToWrite, blockToWrite);
+                    blockToWrite.clear();
+                }
+
+                ram.writeRecordToBlock(blockToWrite.getSize(), blockToWrite, record);
+                prevArea = totalArea; // Update the previous area
             }
 
-            if (tapeToAdd.runCount == currentFib) {
-                tapeToAdd = (tapeToAdd == _tape1) ? _tape2 : _tape1;
-
-                // Update Fibonacci sequence for the next run
-                currentFib = fib1 + fib2;
-                fib1 = fib2;
-                fib2 = currentFib;
-
-            }
-
-            prevArea = totalArea;
-            totalReadOperations++;
-
-            if (index == blockOfMemory.getSize()) {
-                ram.loadToBuffer(fileToSort);
-                index = 0;
+            // Load the next block of input data if the current block is fully processed
+            if (index >= blockOfInput.getSize()) {
+                blockOfInput = ram.loadToBuffer(fileToSort);
+                if (blockOfInput != null) {
+                    ram.setBlockInput(blockOfInput);
+                    index = 0; // Reset the index for the new block
+                }
             }
         }
 
-        while (tapeToAdd.getRunCount() < fib2) {
-            tapeToAdd.runCount++;
+        // Write any remaining data in buffers to the tapes
+        if (blockFirstTape.getSize() > 0) {
+            ram.writeToFile(firstTape, blockFirstTape);
+        }
+        if (blockSecondTape.getSize() > 0) {
+            ram.writeToFile(secondTape, blockSecondTape);
         }
 
+        // Ensure Fibonacci sequence consistency
+        while (tapeToWrite.getRunCount() < fib2) {
+            tapeToWrite.runCount++;
+        }
     }
 
-    public void mergeTapes(Tape _tape1, Tape _tape2, Tape _tapeToWriteTo) throws IOException {
+
+    public void mergeTapes(DiskFile _tape1, DiskFile _tape2, DiskFile _tapeToWriteTo) throws IOException {
 
     }
 

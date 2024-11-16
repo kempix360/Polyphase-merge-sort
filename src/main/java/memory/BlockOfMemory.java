@@ -3,7 +3,7 @@ package memory;
 public class BlockOfMemory {
     public static final int BUFFER_SIZE = 2400;
     private final byte[] buffer;
-    private final int size; // Actual size of data in the block
+    private int size; // Actual size of data in the block
 
     public BlockOfMemory() {
         this.buffer = new byte[BUFFER_SIZE];
@@ -11,8 +11,8 @@ public class BlockOfMemory {
     }
 
     public BlockOfMemory(byte[] data, int size) {
-        this.buffer = new byte[size];
-        System.arraycopy(data, 0, this.buffer, 0, size);
+        this.buffer = new byte[BUFFER_SIZE];
+        System.arraycopy(data, 0, this.buffer, 0, BUFFER_SIZE);
         this.size = size;
     }
 
@@ -22,6 +22,10 @@ public class BlockOfMemory {
 
     public int getSize() {
         return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
     }
 
     public boolean isEmpty() {
@@ -44,6 +48,7 @@ public class BlockOfMemory {
         for (int i = 0; i < size; i++) {
             buffer[i] = 0;
         }
+        size = 0;
     }
 
 }

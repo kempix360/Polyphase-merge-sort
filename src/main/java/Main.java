@@ -10,83 +10,27 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        Scanner scanner = new Scanner(System.in);
-        int option;
+        MainHelper mainHelper = new MainHelper();
         RAM ram = new RAM();
         String inputFile = "input.txt";
-        String tape1File = "src\\main\\java\\tapes\\tape1.txt";
-        String tape2File = "src\\main\\java\\tapes\\tape2.txt";
-        String tape3File = "src\\main\\java\\tapes\\tape3.txt";
+        String tape1File = "tapes\\tape1.txt";
+        String tape2File = "tapes\\tape2.txt";
+        String tape3File = "tapes\\tape3.txt";
+        PolyphaseSort polyphaseSort = new PolyphaseSort(inputFile, tape1File, tape2File, tape3File, ram);
         new FileWriter(inputFile).close();
         new FileWriter(tape1File).close();
         new FileWriter(tape2File).close();
         new FileWriter(tape3File).close();
 
 
-        System.out.println("Choose option:");
-        System.out.println("1. Generate random data");
-        System.out.println("2. Insert data from keyboard");
-        System.out.println("3. Load data from a text file");
-        while (true) {
-            try {
-                option = scanner.nextInt(); // Try reading the input
-                if (option < 1 || option > 3) {  // Ensure the option is valid
-                    System.out.println("Invalid option. Please choose between 1 and 3.");
-                } else {
-                    break;  // Exit loop if valid option
-                }
-            } catch (InputMismatchException e) {
-                System.out.println("Invalid input. Please enter a number.");
-                scanner.next();  // Clear the invalid input from scanner buffer
-            }
-        }
-        int n;
-        while (true) {
-            try {
-                System.out.print("How much data do you want to generate? ");
-                n = scanner.nextInt();
-                if (n <= 0) {
-                    System.out.println("Please enter a positive number.");
-                } else {
-                    break;  // Valid number, break out of the loop
-                }
-            } catch (InputMismatchException e) {
-                System.out.println("Invalid input. Please enter a valid number.");
-                scanner.next();  // Clear invalid input
-            }
-        }
+        mainHelper.generateDataToFile(inputFile);
+        polyphaseSort.sort();
 
-
-        if (option == 1) {
-            DataGenerator randomGenerator = new RandomDataGenerator();
-            randomGenerator.generateData(inputFile, n);
-
-        } else if (option == 2) {
-            DataGenerator randomGenerator = new KeyboardDataGenerator();
-            randomGenerator.generateData(inputFile, n);
-
-        } else {
-            String testFile;
-            System.out.print("Provide the name of the file: ");
-            while (true) {
-                testFile = scanner.next();
-                if (testFile.trim().isEmpty()) {
-                    System.out.println("File name cannot be empty. Please provide a valid name.");
-                } else {
-                    break;  // Valid input, break out of the loop
-                }
-            }
-            DataGenerator randomGenerator = new FileDataGenerator(testFile);
-            randomGenerator.generateData(inputFile, n);
-        }
-
-        ram.loadToBuffer(inputFile, ram.getBlockInput());
-        ram.writeToFile(inputFile, ram.getBlockInput());
+//        ram.loadToBuffer(inputFile, ram.getBlockInput());
+//        ram.writeToFile(inputFile, ram.getBlockInput());
 
         System.out.println("Data before sort:");
         printFile(inputFile);
-
-
     }
 
     private static void printFile(String filename) throws IOException {
