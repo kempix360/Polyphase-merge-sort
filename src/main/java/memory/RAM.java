@@ -4,15 +4,12 @@ import java.io.*;
 import java.util.Scanner;
 
 public class RAM {
-    private final String filename = "input.txt";
     private BlockOfMemory blockInput;
     private BlockOfMemory blockTape1;
     private BlockOfMemory blockTape2;
     private BlockOfMemory blockTape3;
-    private Scanner scanner;
 
     public RAM() throws FileNotFoundException {
-        scanner = new Scanner(new FileInputStream(filename));
         blockInput = new BlockOfMemory();
         blockTape1 = new BlockOfMemory();
         blockTape2 = new BlockOfMemory();
@@ -23,6 +20,7 @@ public class RAM {
         // Initialize fileInputStream and scanner if not already done
         byte[] buffer = new byte[BlockOfMemory.BUFFER_SIZE];
         int bufferIndex = 0;
+        Scanner scanner = file.getScanner();
 
         // Loop through the file reading each integer as a token
         while (scanner.hasNextInt() && bufferIndex < BlockOfMemory.BUFFER_SIZE) {
@@ -45,13 +43,13 @@ public class RAM {
     }
 
 
-    public void writeToFile(DiskFile file, BlockOfMemory _blockOfMemory) {
+    public void writeToFile(DiskFile file, BlockOfMemory _blockOfMemory, int index) {
         try {
             DataOutputStream outputStream = new DataOutputStream(file.getFileOutputStream());
             byte[] data = _blockOfMemory.getBuffer();
             int size = _blockOfMemory.getSize();
 
-            for (int i = 0; i < size; i += 4) {
+            for (int i = index; i < size; i += 4) {
                 if (i + 3 < size) {
                     int number = ((data[i] & 0xFF) << 24) |
                             ((data[i + 1] & 0xFF) << 16) |
