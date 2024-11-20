@@ -49,9 +49,12 @@ public class Main {
         int n;
         while (true) {
             try {
-                System.out.print("How much data do you want to generate? ");
+                if (option == 3) {
+                    System.out.print("How much data do you want to load? (type 0 if you want to load all data)");
+                }
+                else System.out.print("How much data do you want to generate?");
                 n = scanner.nextInt();
-                if (n <= 0) {
+                if (n < 0) {
                     System.out.println("Please enter a positive number.");
                 } else {
                     break;  // Valid number, break out of the loop

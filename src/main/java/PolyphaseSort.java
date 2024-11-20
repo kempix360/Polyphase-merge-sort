@@ -25,8 +25,15 @@ class PolyphaseSort {
     }
 
     public void sort() throws IOException {
+        // ANSI color codes
+        final String RESET = "\u001B[0m";
+        final String YELLOW = "\u001B[33m";
+        final String CYAN = "\u001B[36m";
+        final String GREEN = "\u001B[32m";
+        final String RED = "\u001B[31m";
+
         System.out.println("\n---------------------------------");
-        System.out.println("Data before sort:");
+        System.out.println(YELLOW + "Data before sort:" + RESET);
         printFile(fileToSortPath);
 
         divideIntoTapes();
@@ -51,9 +58,10 @@ class PolyphaseSort {
         writeFinalTapeToInput(finalTape, fileToSortPath);
 
         System.out.println("\n---------------------------------");
-        System.out.println("Data after sort:");
+        System.out.println(YELLOW + "Data after sort:" + RESET);
         printFile(fileToSortPath);
         System.out.println("\n---------------------------------");
+        System.out.println(CYAN + "Sorting statistics:" + RESET);
         printStats();
     }
 

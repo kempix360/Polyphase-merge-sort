@@ -19,10 +19,18 @@ public class FileDataGenerator implements DataGenerator {
              BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
             String line;
             int count = 0;
-            while ((line = reader.readLine()) != null && count < n) {
-                writer.write(line);
-                writer.newLine();
-                count++;
+            if (n == 0) {
+                while ((line = reader.readLine()) != null) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+            else {
+                while ((line = reader.readLine()) != null && count < n) {
+                    writer.write(line);
+                    writer.newLine();
+                    count++;
+                }
             }
         }
     }
