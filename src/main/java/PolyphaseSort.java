@@ -3,27 +3,58 @@ import memory.RAM;
 import memory.Record;
 import memory.DiskFile;
 
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 
 class PolyphaseSort {
-    private DiskFile inputTape;
+    private String fileToSortPath;
     private DiskFile tape1;
     private DiskFile tape2;
-    private RAM ram;
+    private DiskFile tape3;
+    private final RAM ram;
     private int phaseCount = 0;
-    private int totalReadOperations = 0;
-    private int totalWriteOperations = 0;
-    private BlockOfMemory blockInputTape;
+    private BlockOfMemory blockTape3;
     private BlockOfMemory blockTape1;
     private BlockOfMemory blockTape2;
-    private BlockOfMemory blockTape3;
 
     public PolyphaseSort(String _inputTape, String tape1File, String tape2File, RAM _ram) throws IOException {
+        fileToSortPath = _inputTape;
         tape1 = new DiskFile(tape1File);
         tape2 = new DiskFile(tape2File);
-        inputTape = new DiskFile(_inputTape);
+        tape3 = new DiskFile(_inputTape);
         ram = _ram;
+    }
+
+    public void sort() throws IOException {
+        System.out.println("\n---------------------------------");
+        System.out.println("Data before sort:");
+        printFile(fileToSortPath);
+
+        divideIntoTapes();
+
+        while (tape1.runCount + tape2.runCount + tape3.runCount != 1) {
+            mergeTapes(tape1, tape2, tape3);
+            // Swap the tapes for the next phase
+            DiskFile temp;
+            if (tape1.runCount > tape2.runCount) {
+                temp = tape2;
+                tape2 = tape3;
+            }
+            else {
+                temp = tape1;
+                tape1 = tape3;
+            }
+            tape3 = temp;
+            phaseCount++;
+        }
+
+        DiskFile finalTape = (tape1.runCount == 1) ? tape1 : tape2;
+        writeFinalTapeToInput(finalTape, fileToSortPath);
+
+        System.out.println("\n---------------------------------");
+        System.out.println("Data after sort:");
+        printFile(fileToSortPath);
+        System.out.println("\n---------------------------------");
+        printStats();
     }
 
     public void divideIntoTapes() throws IOException {
@@ -32,8 +63,8 @@ class PolyphaseSort {
         blockTape2 = new BlockOfMemory();
 
         // Load the first block of input data
-        blockInputTape = ram.loadToBuffer(inputTape);
-        if (blockInputTape == null) {
+        blockTape3 = ram.loadToBuffer(tape3);
+        if (blockTape3 == null) {
             throw new IOException("File is empty or cannot be loaded.");
         }
 
@@ -45,11 +76,11 @@ class PolyphaseSort {
         DiskFile tapeToWrite = tape1;
         int joinedRuns = 0;
 
-        while (blockInputTape != null) {
+        while (blockTape3 != null) {
             // Process the current block until it's exhausted
-            while (index < blockInputTape.getSize()) {
+            while (index < blockTape3.getSize()) {
                 // Read the next record from the current block
-                Record record = ram.readRecordFromBlock(index, blockInputTape);
+                Record record = ram.readRecordFromBlock(index, blockTape3);
                 index += Record.RECORD_SIZE;
                 int totalArea = record.getArea();
 
@@ -94,11 +125,9 @@ class PolyphaseSort {
             }
 
             // Load the next block of input data if the current block is fully processed
-            if (index >= blockInputTape.getSize()) {
-                blockInputTape = ram.loadToBuffer(inputTape);
-                if (blockInputTape != null) {
-                    index = 0; // Reset the index for the new block
-                }
+            if (index >= blockTape3.getSize()) {
+                blockTape3 = ram.loadToBuffer(tape3);
+                index = 0;
             }
         }
 
@@ -119,9 +148,14 @@ class PolyphaseSort {
 
     public void mergeTapes(DiskFile firstTape, DiskFile secondTape, DiskFile _tapeToWriteTo) throws IOException {
         // Buffers for reading from tapes and writing to the output tape
+        firstTape.resetFileInputStream();
+        secondTape.resetFileInputStream();
+        firstTape.resetScanner();
+        secondTape.resetScanner();
+
         blockTape1 = ram.loadToBuffer(firstTape);
         blockTape2 = ram.loadToBuffer(secondTape);
-        blockInputTape = new BlockOfMemory();
+        blockTape3 = new BlockOfMemory();
         _tapeToWriteTo.resetFileOutputStream();
 
         int indexTape1 = 0, indexTape2 = 0;
@@ -186,93 +220,86 @@ class PolyphaseSort {
             }
             firstTape.runCount--;
             secondTape.runCount--;
-            inputTape.runCount++;
+            tape3.runCount++;
         }
 
         // Write any remaining data in the output buffer to the tape
-        if (blockInputTape.getSize() > 0) {
-            ram.writeToFile(_tapeToWriteTo, blockInputTape, 0);
+        if (blockTape3.getSize() > 0) {
+            ram.writeToFile(_tapeToWriteTo, blockTape3, 0);
         }
 
         // Write the remaining data from the non-empty tape to the output tape and clear the other tape
         firstTape.resetFileOutputStream();
         secondTape.resetFileOutputStream();
         while (blockTape1 != null && tape1.runCount > 0) {
-            ram.writeToFile(firstTape, blockTape1, indexTape1 - Record.RECORD_SIZE);
+            ram.writeToFile(firstTape, blockTape1, indexTape1);
             blockTape1 = ram.loadToBuffer(firstTape);
             indexTape1 = 0;
         }
         while (blockTape2 != null && tape2.runCount > 0) {
-            ram.writeToFile(secondTape, blockTape2, indexTape2 - Record.RECORD_SIZE);
+            ram.writeToFile(secondTape, blockTape2, indexTape2);
             blockTape2 = ram.loadToBuffer(secondTape);
             indexTape2 = 0;
         }
     }
 
     private void writeNextRecord (DiskFile tape, Record record) {
-        if (blockInputTape.getSize() + Record.RECORD_SIZE > BlockOfMemory.BUFFER_SIZE) {
-            ram.writeToFile(tape, blockInputTape, 0);
-            blockInputTape.clear();
+        if (blockTape3.getSize() + Record.RECORD_SIZE > BlockOfMemory.BUFFER_SIZE) {
+            ram.writeToFile(tape, blockTape3, 0);
+            blockTape3.clear();
         }
-        ram.writeRecordToBlock(blockInputTape.getSize(), blockInputTape, record);
+        ram.writeRecordToBlock(blockTape3.getSize(), blockTape3, record);
     }
 
-    public void sort() throws IOException {
-        divideIntoTapes();
+    private void writeFinalTapeToInput(DiskFile finalTape, String inputFilePath) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(inputFilePath))) {
+            finalTape.resetFileInputStream();
+            finalTape.resetScanner();
+            BlockOfMemory block = ram.loadToBuffer(finalTape);
+            int index = 0;
 
-        System.out.println("Data after sort:");
-        Main.printFile("disk_files\\input.txt");
-
-        System.out.println("\nTape1:");
-        Main.printFile("disk_files\\tape1.txt");
-
-        System.out.println("\nTape2:");
-        Main.printFile("disk_files\\tape2.txt");
-
-        System.out.println("\n\nNumber of runs Tape1: " + tape1.runCount);
-        System.out.println("Number of runs Tape2: " + tape2.runCount);
-        System.out.println("\nMerging tapes...");
-
-        mergeTapes(
-                tape1,
-                tape2,
-                inputTape
-        );
-        phaseCount = 0;
-
-//        mergeTapes(tape1, tape2, inputTape);
-//        phaseCount++;
-//        while (tape1.runCount + tape2.runCount + inputTape.runCount != 1) {
-//            mergeTapes(tape1, tape2, inputTape);
-//            phaseCount++;
-//            // Swap the tapes for the next phase
-//            DiskFile temp;
-//            if (tape1.runCount > tape2.runCount) {
-//                temp = tape2;
-//                tape2 = inputTape;
-//            }
-//            else {
-//                temp = tape1;
-//                tape1 = inputTape;
-//            }
-//            inputTape = temp;
-//        }
-
+            while (block != null) {
+                while (index < block.getSize()) {
+                    Record record = ram.readRecordFromBlock(index, block);
+                    if (record == null) {
+                        break;
+                    }
+                    writer.write(record.toString());
+                    writer.newLine();
+                    index += Record.RECORD_SIZE;
+                }
+                block = ram.loadToBuffer(finalTape);
+                index = 0;
+            }
+        }
     }
-
 
     public void printStats() {
         System.out.println("Number of sort phases: " + phaseCount);
-        System.out.println("Number of read operations: " + totalReadOperations);
-        System.out.println("Number of write operations: " + totalWriteOperations);
+        System.out.println("Number of read operations: " + ram.getTotalReadOperations());
+        System.out.println("Number of write operations: " + ram.getTotalWriteOperations());
     }
 
-
-    // TODO:
-    // 1. dividing input into 2 tapes
-    // 2. merging the contents of the tapes
-    // 3. saving to the initial file and counting number of phases
-    // ogarnac jak dziala sklejanie z dummy runami
-    // distribution z wykrywaniem sklejania
+    public static void printFile(String filename) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            String line;
+            int prevArea = -1;
+//            System.out.println("New run");
+//            int runCount = 1;
+            while ((line = reader.readLine()) != null) {
+                String[] values = line.split("\\s+"); // Split by whitespace
+                int length = Integer.parseInt(values[0]);
+                int width = Integer.parseInt(values[1]);
+                int height = Integer.parseInt(values[2]);
+                Record record = new Record(length, width, height);
+//                if (record.getArea() < prevArea) {
+//                    System.out.println("New run");
+//                    runCount++;
+//                }
+//                prevArea = record.getArea();
+                System.out.println(record);
+            }
+        }
+    }
 
 }

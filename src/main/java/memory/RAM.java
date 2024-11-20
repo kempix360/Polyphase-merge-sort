@@ -5,6 +5,9 @@ import java.util.Scanner;
 
 public class RAM {
 
+    private int totalReadOperations = 0;
+    private int totalWriteOperations = 0;
+
     public RAM() {
     }
 
@@ -25,6 +28,8 @@ public class RAM {
             buffer[bufferIndex + 3] = (byte) number;
             bufferIndex += 4;
         }
+
+        totalReadOperations++;
 
         // If we’ve read data, return a new BlockOfMemory
         if (bufferIndex > 0) {
@@ -60,6 +65,9 @@ public class RAM {
                     data[i + 3] = 0;
                 }
             }
+
+            totalWriteOperations++;
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -128,6 +136,14 @@ public class RAM {
 
         blockOfMemory.setSize(size + recordSize);
 
+    }
+
+    public int getTotalReadOperations() {
+        return totalReadOperations;
+    }
+
+    public int getTotalWriteOperations() {
+        return totalWriteOperations;
     }
 
 }

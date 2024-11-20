@@ -25,7 +25,7 @@ public class DiskFile {
         return fileInputStream;
     }
 
-    public void resetFileInputStream(FileInputStream fileInputStream) throws IOException {
+    public void resetFileInputStream() throws IOException {
         if (this.fileInputStream != null) { this.fileInputStream.close(); }
         this.fileInputStream = new FileInputStream(filename);;
     }
@@ -49,7 +49,15 @@ public class DiskFile {
     }
 
     public int getRunCount() {
-        return runCount;
+        return this.runCount;
+    }
+
+    public void incrementRunCount() {
+        this.runCount++;
+    }
+
+    public void setRunCount(int runCount) {
+        this.runCount = runCount;
     }
 
 }
