@@ -4,16 +4,8 @@ import java.io.*;
 import java.util.Scanner;
 
 public class RAM {
-    private BlockOfMemory blockInput;
-    private BlockOfMemory blockTape1;
-    private BlockOfMemory blockTape2;
-    private BlockOfMemory blockTape3;
 
-    public RAM() throws FileNotFoundException {
-        blockInput = new BlockOfMemory();
-        blockTape1 = new BlockOfMemory();
-        blockTape2 = new BlockOfMemory();
-        blockTape3 = new BlockOfMemory();
+    public RAM() {
     }
 
     public BlockOfMemory loadToBuffer(DiskFile file) {
@@ -75,6 +67,10 @@ public class RAM {
 
 
     public Record readRecordFromBlock(int index, BlockOfMemory blockOfMemory) {
+        if (blockOfMemory == null) {
+            return new Record(-1, -1, -1);
+        }
+
         byte[] data = blockOfMemory.getBuffer();
         int size = blockOfMemory.getSize();
         int recordSize = Record.RECORD_SIZE;
@@ -83,7 +79,7 @@ public class RAM {
         int values_index = 0;
 
         if (index < 0 || (index + recordSize) > BlockOfMemory.BUFFER_SIZE) {
-            return null;
+            return new Record(-1, -1, -1);
         }
 
         for (int i = index; i < index + recordSize; i += 4) {
@@ -102,6 +98,14 @@ public class RAM {
     }
 
     public void writeRecordToBlock(int index, BlockOfMemory blockOfMemory, Record record) {
+        if (blockOfMemory == null) {
+            return;
+        }
+
+        if (record == null || record.getFirst() == -1 || record.getSecond() == -1 || record.getThird() == -1) {
+            return;
+        }
+
         byte[] data = blockOfMemory.getBuffer();
         int size = blockOfMemory.getSize();
         int recordSize = Record.RECORD_SIZE;
@@ -110,7 +114,7 @@ public class RAM {
             return;
         }
 
-        int[] record_values = { record.getFirst(), record.getSecond(), record.getThird() };
+        int[] record_values = {record.getFirst(), record.getSecond(), record.getThird()};
         int values_index = 0;
 
         for (int i = index; i < index + recordSize; i += 4) {
@@ -126,35 +130,4 @@ public class RAM {
 
     }
 
-    public BlockOfMemory getBlockInput() {
-        return blockInput;
-    }
-
-    public void setBlockInput(BlockOfMemory blockInput) {
-        this.blockInput = blockInput;
-    }
-
-    public BlockOfMemory getBlockTape1() {
-        return blockTape1;
-    }
-
-    public void setBlockTape1(BlockOfMemory blockTape1) {
-        this.blockTape1 = blockTape1;
-    }
-
-    public BlockOfMemory getBlockTape2() {
-        return blockTape2;
-    }
-
-    public void setBlockTape2(BlockOfMemory blockTape2) {
-        this.blockTape2 = blockTape2;
-    }
-
-    public BlockOfMemory getBlockTape3() {
-        return blockTape3;
-    }
-
-    public void setBlockTape3(BlockOfMemory blockTape3) {
-        this.blockTape3 = blockTape3;
-    }
 }

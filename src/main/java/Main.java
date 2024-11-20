@@ -13,9 +13,9 @@ public class Main {
     public static void main(String[] args) throws IOException {
         MainHelper mainHelper = new MainHelper();
         RAM ram = new RAM();
-        String inputFile = "tapes\\input.txt";
-        String tape1File = "tapes\\tape1.txt";
-        String tape2File = "tapes\\tape2.txt";
+        String inputFile = "disk_files\\input.txt";
+        String tape1File = "disk_files\\tape1.txt";
+        String tape2File = "disk_files\\tape2.txt";
         PolyphaseSort polyphaseSort = new PolyphaseSort(inputFile, tape1File, tape2File, ram);
         new FileWriter(inputFile).close();
         new FileWriter(tape1File).close();
@@ -24,19 +24,21 @@ public class Main {
 
         mainHelper.generateDataToFile(inputFile);
 
-        System.out.println("Data after sort:");
-        printFile(inputFile);
+        polyphaseSort.sort();
 
-        System.out.println("\nTape1:");
-        printFile(tape1File);
-
-        System.out.println("\nTape2:");
-        printFile(tape2File);
+//        System.out.println("\nData after sort:");
+//        printFile(inputFile);
+//
+//        System.out.println("\nTape1:");
+//        printFile(tape1File);
+//
+//        System.out.println("\nTape2:");
+//        printFile(tape2File);
 
 
     }
 
-    private static void printFile(String filename) throws IOException {
+    public static void printFile(String filename) throws IOException {
         try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
             String line;
             int prevArea = -1;

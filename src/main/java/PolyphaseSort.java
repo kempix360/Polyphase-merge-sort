@@ -14,6 +14,10 @@ class PolyphaseSort {
     private int phaseCount = 0;
     private int totalReadOperations = 0;
     private int totalWriteOperations = 0;
+    private BlockOfMemory blockInputTape;
+    private BlockOfMemory blockTape1;
+    private BlockOfMemory blockTape2;
+    private BlockOfMemory blockTape3;
 
     public PolyphaseSort(String _inputTape, String tape1File, String tape2File, RAM _ram) throws IOException {
         tape1 = new DiskFile(tape1File);
@@ -22,14 +26,14 @@ class PolyphaseSort {
         ram = _ram;
     }
 
-    public void divideIntoTapes(DiskFile firstTape, DiskFile secondTape) throws IOException {
+    public void divideIntoTapes() throws IOException {
         // Initialize buffers for the tapes
-        BlockOfMemory blockFirstTape = new BlockOfMemory();
-        BlockOfMemory blockSecondTape = new BlockOfMemory();
+        blockTape1 = new BlockOfMemory();
+        blockTape2 = new BlockOfMemory();
 
         // Load the first block of input data
-        BlockOfMemory blockOfInput = ram.loadToBuffer(inputTape);
-        if (blockOfInput == null) {
+        blockInputTape = ram.loadToBuffer(inputTape);
+        if (blockInputTape == null) {
             throw new IOException("File is empty or cannot be loaded.");
         }
 
@@ -38,13 +42,14 @@ class PolyphaseSort {
         int prevArea = -1; // Initialize the previous record's area for run comparison
         int index = 0; // Index within the current block
         int lastAreaTape1 = Integer.MAX_VALUE, lastAreaTape2 = Integer.MAX_VALUE;
-        DiskFile tapeToWrite = firstTape;
+        DiskFile tapeToWrite = tape1;
+        int joinedRuns = 0;
 
-        while (blockOfInput != null) {
+        while (blockInputTape != null) {
             // Process the current block until it's exhausted
-            while (index < blockOfInput.getSize()) {
+            while (index < blockInputTape.getSize()) {
                 // Read the next record from the current block
-                Record record = ram.readRecordFromBlock(index, blockOfInput);
+                Record record = ram.readRecordFromBlock(index, blockInputTape);
                 index += Record.RECORD_SIZE;
                 int totalArea = record.getArea();
 
@@ -52,32 +57,32 @@ class PolyphaseSort {
                 if (totalArea < prevArea) {
                     tapeToWrite.runCount++;
                     if (tapeToWrite.runCount == currentFib) {
-                        if (tapeToWrite == firstTape) { // update latest area for the tape
+                        if (tapeToWrite == tape1) { // update latest area for the tape
                             lastAreaTape1 = prevArea;
                         } else {
                             lastAreaTape2 = prevArea;
                         }
                         // Switch to the other tape
-                        tapeToWrite = (tapeToWrite == firstTape) ? secondTape : firstTape;
+                        tapeToWrite = (tapeToWrite == tape1) ? tape2 : tape1;
 
                         // check if there will be no joined runs (if yes, decrement run count)
-                        Record r = ram.readRecordFromBlock(index, blockOfInput);
-                        if (tapeToWrite == firstTape && r.getArea() > lastAreaTape1) {
+                        if (tapeToWrite == tape1 && record.getArea() > lastAreaTape1) {
                             tapeToWrite.runCount--;
-                        } else if (tapeToWrite == secondTape && r.getArea() > lastAreaTape2) {
+                            joinedRuns++;
+                        } else if (tapeToWrite == tape2 && record.getArea() > lastAreaTape2) {
                             tapeToWrite.runCount--;
+                            joinedRuns++;
                         }
 
                         // Update Fibonacci sequence
                         currentFib = fib1 + fib2;
-                        fib1 = fib2;
-                        fib2 = currentFib;
+                        fib2 = fib1;
+                        fib1 = currentFib;
                     }
                 }
 
-
                 // Write the record to the appropriate tape's buffer
-                BlockOfMemory blockToWrite = (tapeToWrite == firstTape) ? blockFirstTape : blockSecondTape;
+                BlockOfMemory blockToWrite = (tapeToWrite == tape1) ? blockTape1 : blockTape2;
                 if (blockToWrite.getSize() + Record.RECORD_SIZE > BlockOfMemory.BUFFER_SIZE) {
                     // Buffer is full: write it to the tape and clear it
                     ram.writeToFile(tapeToWrite, blockToWrite, 0);
@@ -89,25 +94,24 @@ class PolyphaseSort {
             }
 
             // Load the next block of input data if the current block is fully processed
-            if (index >= blockOfInput.getSize()) {
-                blockOfInput = ram.loadToBuffer(inputTape);
-                if (blockOfInput != null) {
-                    ram.setBlockInput(blockOfInput);
+            if (index >= blockInputTape.getSize()) {
+                blockInputTape = ram.loadToBuffer(inputTape);
+                if (blockInputTape != null) {
                     index = 0; // Reset the index for the new block
                 }
             }
         }
 
         // Write any remaining data in buffers to the tapes
-        if (blockFirstTape.getSize() > 0) {
-            ram.writeToFile(firstTape, blockFirstTape, 0);
+        if (blockTape1.getSize() > 0) {
+            ram.writeToFile(tape1, blockTape1, 0);
         }
-        if (blockSecondTape.getSize() > 0) {
-            ram.writeToFile(secondTape, blockSecondTape, 0);
+        if (blockTape2.getSize() > 0) {
+            ram.writeToFile(tape2, blockTape2, 0);
         }
 
         // Ensure Fibonacci sequence consistency
-        while (tapeToWrite.getRunCount() < fib2) {
+        while (tapeToWrite.getRunCount() < fib1) {
             tapeToWrite.runCount++;
         }
     }
@@ -115,125 +119,142 @@ class PolyphaseSort {
 
     public void mergeTapes(DiskFile firstTape, DiskFile secondTape, DiskFile _tapeToWriteTo) throws IOException {
         // Buffers for reading from tapes and writing to the output tape
-        BlockOfMemory blockTape1 = ram.loadToBuffer(firstTape);
-        BlockOfMemory blockTape2 = ram.loadToBuffer(secondTape);
-        BlockOfMemory blockToWrite = new BlockOfMemory();
+        blockTape1 = ram.loadToBuffer(firstTape);
+        blockTape2 = ram.loadToBuffer(secondTape);
+        blockInputTape = new BlockOfMemory();
         _tapeToWriteTo.resetFileOutputStream();
 
         int indexTape1 = 0, indexTape2 = 0;
         int prevAreaTape1 = -1, prevAreaTape2 = -1;
         int numOfRuns = Math.min(firstTape.runCount, secondTape.runCount);
-        // Continue merging until both tapes are exhausted
+
+        Record record1 = null, record2 = null;
+        // Fetch the first records from the tapes
+        record1 = (blockTape1 != null) ? ram.readRecordFromBlock(indexTape1, blockTape1) : null;
+        indexTape1 += Record.RECORD_SIZE;
+        record2 = (blockTape2 != null) ? ram.readRecordFromBlock(indexTape2, blockTape2) : null;
+        indexTape2 += Record.RECORD_SIZE;
+
+
+        boolean isEndRun1, isEndRun2;
+        // Continue merging until reached number of runs
         for (int i = 0; i < numOfRuns; i++) {
-            Record record1 = null, record2 = null;
-            record1 = ram.readRecordFromBlock(indexTape1, blockTape1);
-            indexTape1 += Record.RECORD_SIZE;
-            record2 = ram.readRecordFromBlock(indexTape2, blockTape2);
-            indexTape2 += Record.RECORD_SIZE;
+            int runCount = 0;
+            isEndRun1 = isEndRun2 = false;
 
-            while (true) {
-                if (record1.getArea() < record2.getArea()) {
-                    ram.writeRecordToBlock(blockToWrite.getSize(), blockToWrite, record1);
+            while (!isEndRun1 || !isEndRun2) {
+                if (record1 == null && record2 == null) {
+                    break;
+                }
+                if (record1 == null) {
+                    isEndRun1 = true;
+                }
+                if (record2 == null) {
+                    isEndRun2 = true;
+                }
+                if (isEndRun2 || (!isEndRun1 && record1.getArea() <= record2.getArea())) {
+                    writeNextRecord(_tapeToWriteTo, record1);
                     prevAreaTape1 = record1.getArea();
-                    record1 = ram.readRecordFromBlock(indexTape1, blockTape1);
-                    if (record1.getArea() < prevAreaTape1) {
-                        firstTape.runCount--;
-                        while (record2.getArea() >= prevAreaTape2) {
-                            ram.writeRecordToBlock(blockToWrite.getSize(), blockToWrite, record2);
-                            prevAreaTape2 = record2.getArea();
-                            record2 = ram.readRecordFromBlock(indexTape2, blockTape2);
-                            if (record2.getArea() < prevAreaTape2) {
-                                secondTape.runCount--;
-                                break;
-                            }
-                            else {
-                                indexTape2 += Record.RECORD_SIZE;
-                            }
-                        }
-                        break;
+
+                    // read next record from tape1 and reload block if needed
+                    if (blockTape1 != null && indexTape1 >= blockTape1.getSize()) {
+                        blockTape1 = ram.loadToBuffer(firstTape);
+                        indexTape1 = 0;
                     }
-                    else {
-                        indexTape1 += Record.RECORD_SIZE;
+                    record1 = (blockTape1 != null) ? ram.readRecordFromBlock(indexTape1, blockTape1) : null;
+                    indexTape1 += Record.RECORD_SIZE;
+
+                    if (record1 == null || record1.getArea() < prevAreaTape1) {
+                        isEndRun1 = true;
                     }
-                }
-                else {
-                    ram.writeRecordToBlock(blockToWrite.getSize(), blockToWrite, record2);
+                } else {
+                    writeNextRecord(_tapeToWriteTo, record2);
                     prevAreaTape2 = record2.getArea();
-                    record2 = ram.readRecordFromBlock(indexTape2, blockTape2);
-                    if (record2.getArea() < prevAreaTape2) {
-                        secondTape.runCount--;
-                        while (record1.getArea() >= prevAreaTape1) {
-                            ram.writeRecordToBlock(blockToWrite.getSize(), blockToWrite, record1);
-                            prevAreaTape1 = record1.getArea();
-                            record1 = ram.readRecordFromBlock(indexTape1, blockTape1);
-                            if (record1.getArea() < prevAreaTape1) {
-                                firstTape.runCount--;
-                                break;
-                            }
-                            else {
-                                indexTape2 += Record.RECORD_SIZE;
-                            }
-                        }
-                        break;
+
+                    // read next record from tape2 and reload block if needed
+                    if (blockTape2 != null && indexTape2 >= blockTape2.getSize()) {
+                        blockTape2 = ram.loadToBuffer(secondTape);
+                        indexTape2 = 0;
                     }
-                    else {
-                        indexTape2 += Record.RECORD_SIZE;
+                    record2 = (blockTape2 != null) ? ram.readRecordFromBlock(indexTape2, blockTape2) : null;
+                    indexTape2 += Record.RECORD_SIZE;
+
+                    if (record2 == null || record2.getArea() < prevAreaTape2) {
+                        isEndRun2 = true;
                     }
                 }
             }
-
-            // Write the output buffer to the tape if full
-            if (blockToWrite.getSize() + Record.RECORD_SIZE > BlockOfMemory.BUFFER_SIZE) {
-                ram.writeToFile(_tapeToWriteTo, blockToWrite, 0);
-                blockToWrite.clear();
-            }
-
-            // Reload tape 1's buffer if necessary
-            if (blockTape1 != null && indexTape1 >= blockTape1.getSize()) {
-                blockTape1 = ram.loadToBuffer(firstTape);
-                indexTape1 = 0;
-            }
-
-            // Reload tape 2's buffer if necessary
-            if (blockTape2 != null && indexTape2 >= blockTape2.getSize()) {
-                blockTape2 = ram.loadToBuffer(secondTape);
-                indexTape2 = 0;
-            }
+            firstTape.runCount--;
+            secondTape.runCount--;
+            inputTape.runCount++;
         }
 
         // Write any remaining data in the output buffer to the tape
-        if (blockToWrite.getSize() > 0) {
-            ram.writeToFile(_tapeToWriteTo, blockToWrite, 0);
+        if (blockInputTape.getSize() > 0) {
+            ram.writeToFile(_tapeToWriteTo, blockInputTape, 0);
         }
 
         // Write the remaining data from the non-empty tape to the output tape and clear the other tape
-
-        while (blockTape1 != null) {
-            ram.writeToFile(_tapeToWriteTo, blockTape1, indexTape1);
+        firstTape.resetFileOutputStream();
+        secondTape.resetFileOutputStream();
+        while (blockTape1 != null && tape1.runCount > 0) {
+            ram.writeToFile(firstTape, blockTape1, indexTape1 - Record.RECORD_SIZE);
             blockTape1 = ram.loadToBuffer(firstTape);
             indexTape1 = 0;
         }
-
-        while (blockTape2 != null) {
-            ram.writeToFile(_tapeToWriteTo, blockTape2, indexTape2);
+        while (blockTape2 != null && tape2.runCount > 0) {
+            ram.writeToFile(secondTape, blockTape2, indexTape2 - Record.RECORD_SIZE);
             blockTape2 = ram.loadToBuffer(secondTape);
             indexTape2 = 0;
         }
-
     }
 
+    private void writeNextRecord (DiskFile tape, Record record) {
+        if (blockInputTape.getSize() + Record.RECORD_SIZE > BlockOfMemory.BUFFER_SIZE) {
+            ram.writeToFile(tape, blockInputTape, 0);
+            blockInputTape.clear();
+        }
+        ram.writeRecordToBlock(blockInputTape.getSize(), blockInputTape, record);
+    }
 
     public void sort() throws IOException {
-        divideIntoTapes(tape1, tape2);
+        divideIntoTapes();
 
-        mergeTapes(tape1, tape2, inputTape);
-        phaseCount++;
-//        while (tape1.runCount + tape2.runCount != 1) {
+        System.out.println("Data after sort:");
+        Main.printFile("disk_files\\input.txt");
+
+        System.out.println("\nTape1:");
+        Main.printFile("disk_files\\tape1.txt");
+
+        System.out.println("\nTape2:");
+        Main.printFile("disk_files\\tape2.txt");
+
+        System.out.println("\n\nNumber of runs Tape1: " + tape1.runCount);
+        System.out.println("Number of runs Tape2: " + tape2.runCount);
+        System.out.println("\nMerging tapes...");
+
+        mergeTapes(
+                tape1,
+                tape2,
+                inputTape
+        );
+        phaseCount = 0;
+
+//        mergeTapes(tape1, tape2, inputTape);
+//        phaseCount++;
+//        while (tape1.runCount + tape2.runCount + inputTape.runCount != 1) {
 //            mergeTapes(tape1, tape2, inputTape);
 //            phaseCount++;
 //            // Swap the tapes for the next phase
-//            DiskFile temp = tape1;
-//            tape1 = inputTape;
+//            DiskFile temp;
+//            if (tape1.runCount > tape2.runCount) {
+//                temp = tape2;
+//                tape2 = inputTape;
+//            }
+//            else {
+//                temp = tape1;
+//                tape1 = inputTape;
+//            }
 //            inputTape = temp;
 //        }
 
