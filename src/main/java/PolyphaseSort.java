@@ -4,6 +4,7 @@ import memory.Record;
 import memory.DiskFile;
 
 import java.io.*;
+import java.util.Objects;
 
 class PolyphaseSort {
     private final String fileToSortPath;
@@ -37,11 +38,11 @@ class PolyphaseSort {
 
         divideIntoTapes();
 
-        while (tape1.runCount + tape2.runCount + tape3.runCount != 1) {
+        while (tape1.getRunCount() + tape2.getRunCount() + tape3.getRunCount() != 1) {
             mergeTapes(tape1, tape2, tape3);
             // Swap the tapes for the next phase
             DiskFile temp;
-            if (tape1.runCount > tape2.runCount) {
+            if (tape1.getRunCount() > tape2.getRunCount()) {
                 temp = tape2;
                 tape2 = tape3;
             }
@@ -53,8 +54,8 @@ class PolyphaseSort {
             phaseCount++;
         }
 
-        DiskFile finalTape = (tape1.runCount == 1) ? tape1 : tape2;
-        writeFinalTapeToInput(finalTape, fileToSortPath);
+        DiskFile finalTape = (tape1.getRunCount() == 1) ? tape1 : tape2;
+        if (!Objects.equals(finalTape.getFilename(), fileToSortPath)) writeFinalTapeToInput(finalTape, fileToSortPath);
 
         System.out.println("\n---------------------------------");
         System.out.println(YELLOW + "Data after sort:" + RESET);
@@ -91,8 +92,8 @@ class PolyphaseSort {
 
                 // Check for a new run
                 if (totalArea < prevArea) {
-                    tapeToWrite.runCount++;
-                    if (tapeToWrite.runCount == currentFib) {
+                    tapeToWrite.incrementRunCount();
+                    if (tapeToWrite.getRunCount() == currentFib) {
                         if (tapeToWrite == tape1) { // update latest area for the tape
                             lastAreaTape1 = prevArea;
                         } else {
@@ -103,9 +104,9 @@ class PolyphaseSort {
 
                         // check if there will be no joined runs (if yes, decrement run count)
                         if (tapeToWrite == tape1 && record.getArea() > lastAreaTape1) {
-                            tapeToWrite.runCount--;
+                            tapeToWrite.decrementRunCount();
                         } else if (tapeToWrite == tape2 && record.getArea() > lastAreaTape2) {
-                            tapeToWrite.runCount--;
+                            tapeToWrite.decrementRunCount();
                         }
 
                         // Update Fibonacci sequence
@@ -144,7 +145,7 @@ class PolyphaseSort {
 
         // Ensure Fibonacci sequence consistency
         while (tapeToWrite.getRunCount() < fib1) {
-            tapeToWrite.runCount++;
+            tapeToWrite.incrementRunCount();
         }
     }
 
@@ -162,7 +163,7 @@ class PolyphaseSort {
         _tapeToWriteTo.resetFileOutputStream();
 
         int prevAreaTape1, prevAreaTape2;
-        int numOfRuns = Math.min(firstTape.runCount, secondTape.runCount);
+        int numOfRuns = Math.min(firstTape.getRunCount(), secondTape.getRunCount());
 
         Record record1, record2;
         // Fetch the first records from the tapes
@@ -219,9 +220,9 @@ class PolyphaseSort {
                     }
                 }
             }
-            firstTape.runCount--;
-            secondTape.runCount--;
-            tape3.runCount++;
+            firstTape.decrementRunCount();
+            secondTape.decrementRunCount();
+            tape3.incrementRunCount();
         }
 
         // Write any remaining data in the output buffer to the tape
@@ -232,12 +233,14 @@ class PolyphaseSort {
         // Write the remaining data from the non-empty tape to the output tape and clear the other tape
         firstTape.resetFileOutputStream();
         secondTape.resetFileOutputStream();
-        while (blockTape1 != null && tape1.runCount > 0) {
+        while (blockTape1 != null && tape1.getRunCount() > 0) {
+            if (blockTape1.getIndex() != 0) blockTape1.setIndex(blockTape1.getIndex() - Record.RECORD_SIZE);
             ram.writeToFile(firstTape, blockTape1);
             blockTape1 = ram.loadToBuffer(firstTape);
             if (blockTape1 != null) blockTape1.setIndex(0);
         }
-        while (blockTape2 != null && tape2.runCount > 0) {
+        while (blockTape2 != null && tape2.getRunCount() > 0) {
+            if (blockTape2.getIndex() != 0) blockTape2.setIndex(blockTape2.getIndex() - Record.RECORD_SIZE);
             ram.writeToFile(secondTape, blockTape2);
             blockTape2 = ram.loadToBuffer(secondTape);
             if (blockTape2 != null) blockTape2.setIndex(0);
@@ -264,7 +267,8 @@ class PolyphaseSort {
                     if (record == null) {
                         break;
                     }
-                    writer.write(record.toString());
+                    String s = record.getFirst() + " " + record.getSecond() + " " + record.getThird();
+                    writer.write(s);
                     writer.newLine();
                     block.setIndex(block.getIndex() + Record.RECORD_SIZE);
                 }
@@ -294,7 +298,7 @@ class PolyphaseSort {
                 int height = Integer.parseInt(values[2]);
                 Record record = new Record(length, width, height);
                 if (record.getArea() < prevArea) {
-                    // System.out.println("New run");
+//                    System.out.println("New run");
                     runCount++;
                 }
                 prevArea = record.getArea();
