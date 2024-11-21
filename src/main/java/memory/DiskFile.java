@@ -5,9 +5,9 @@ import java.util.Scanner;
 
 public class DiskFile {
     private final String filename;
-    private FileInputStream fileInputStream = null;
-    private FileOutputStream fileOutputStream = null;
-    private Scanner scanner = null;
+    private FileInputStream fileInputStream;
+    private FileOutputStream fileOutputStream;
+    private Scanner scanner;
     public int runCount = 0;
 
     public DiskFile(String filename) throws IOException {

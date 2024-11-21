@@ -32,8 +32,4 @@ public class Record {
     public String toString() {
         return first + " " + second + " " + third + " Area: " + getArea();
     }
-
-    public boolean compareTo(Record record2) {
-        return this.getArea() < record2.getArea();
-    }
 }

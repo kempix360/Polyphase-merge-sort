@@ -4,6 +4,7 @@ public class BlockOfMemory {
     public static final int BUFFER_SIZE = 2400;
     private final byte[] buffer;
     private int size; // Actual size of data in the block
+    private int index = 0; // Index of the next record to be read
 
     public BlockOfMemory() {
         this.buffer = new byte[BUFFER_SIZE];
@@ -28,20 +29,12 @@ public class BlockOfMemory {
         this.size = size;
     }
 
-    public boolean isEmpty() {
-        if (size == 0) {
-            return true;
-        }
-        for (int i = 0; i < size; i++) {
-            if (buffer[i] != 0) {
-                return false;
-            }
-        }
-        return true;
+    public int getIndex() {
+        return index;
     }
 
-    public boolean isFull() {
-        return size == BUFFER_SIZE;
+    public void setIndex(int index) {
+        this.index = index;
     }
 
     public void clear() {

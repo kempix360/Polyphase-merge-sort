@@ -50,9 +50,9 @@ public class Main {
         while (true) {
             try {
                 if (option == 3) {
-                    System.out.print("How much data do you want to load? (type 0 if you want to load all data)");
+                    System.out.print("How much data do you want to load? (type 0 if you want to load all data) ");
                 }
-                else System.out.print("How much data do you want to generate?");
+                else System.out.print("How much data do you want to generate? ");
                 n = scanner.nextInt();
                 if (n < 0) {
                     System.out.println("Please enter a positive number.");

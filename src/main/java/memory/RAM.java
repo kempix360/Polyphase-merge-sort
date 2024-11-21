@@ -40,11 +40,12 @@ public class RAM {
     }
 
 
-    public void writeToFile(DiskFile file, BlockOfMemory _blockOfMemory, int index) {
+    public void writeToFile(DiskFile file, BlockOfMemory _blockOfMemory) {
         try {
             DataOutputStream outputStream = new DataOutputStream(file.getFileOutputStream());
             byte[] data = _blockOfMemory.getBuffer();
             int size = _blockOfMemory.getSize();
+            int index = _blockOfMemory.getIndex();
 
             for (int i = index; i < size; i += 4) {
                 if (i + 3 < size) {
@@ -74,13 +75,14 @@ public class RAM {
     }
 
 
-    public Record readRecordFromBlock(int index, BlockOfMemory blockOfMemory) {
+    public Record readRecordFromBlock(BlockOfMemory blockOfMemory) {
         if (blockOfMemory == null) {
             return new Record(-1, -1, -1);
         }
 
         byte[] data = blockOfMemory.getBuffer();
         int size = blockOfMemory.getSize();
+        int index = blockOfMemory.getIndex();
         int recordSize = Record.RECORD_SIZE;
 
         int[] record_values = new int[3];
@@ -105,7 +107,7 @@ public class RAM {
         return new Record(record_values[0], record_values[1], record_values[2]);
     }
 
-    public void writeRecordToBlock(int index, BlockOfMemory blockOfMemory, Record record) {
+    public void writeRecordToBlock(BlockOfMemory blockOfMemory, Record record) {
         if (blockOfMemory == null) {
             return;
         }
@@ -118,14 +120,14 @@ public class RAM {
         int size = blockOfMemory.getSize();
         int recordSize = Record.RECORD_SIZE;
 
-        if (index < 0 || (index + recordSize) > BlockOfMemory.BUFFER_SIZE) {
+        if ((size + recordSize) > BlockOfMemory.BUFFER_SIZE) {
             return;
         }
 
         int[] record_values = {record.getFirst(), record.getSecond(), record.getThird()};
         int values_index = 0;
 
-        for (int i = index; i < index + recordSize; i += 4) {
+        for (int i = size; i < size + recordSize; i += 4) {
             int number = record_values[values_index];
             data[i] = (byte) (number >> 24);
             data[i + 1] = (byte) (number >> 16);
