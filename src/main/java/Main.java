@@ -12,9 +12,9 @@ import java.util.Scanner;
 public class Main {
     public static void main(String[] args) throws IOException {
         RAM ram = new RAM();
-        String inputFile = "disk_files\\input.txt";
-        String tape1File = "disk_files\\tape1.txt";
-        String tape2File = "disk_files\\tape2.txt";
+        String inputFile = "disk_files\\input.in";
+        String tape1File = "disk_files\\tape1.in";
+        String tape2File = "disk_files\\tape2.in";
         PolyphaseSort polyphaseSort = new PolyphaseSort(inputFile, tape1File, tape2File, ram);
         new FileWriter(inputFile).close();
         new FileWriter(tape1File).close();

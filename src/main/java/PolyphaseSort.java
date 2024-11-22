@@ -283,6 +283,7 @@ class PolyphaseSort {
         System.out.println("Number of sort phases: " + phaseCount);
         System.out.println("Number of read operations: " + ram.getTotalReadOperations());
         System.out.println("Number of write operations: " + ram.getTotalWriteOperations());
+        System.out.println("Total number of I/O operations: " + (ram.getTotalReadOperations() + ram.getTotalWriteOperations()));
     }
 
     public static int printFile(String filename) throws IOException {
