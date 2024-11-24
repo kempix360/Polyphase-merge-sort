@@ -5,10 +5,12 @@ import java.util.Scanner;
 
 public class RAM {
 
-    private int totalReadOperations = 0;
-    private int totalWriteOperations = 0;
+    private int totalReadOperations;
+    private int totalWriteOperations;
 
     public RAM() {
+        totalReadOperations = 0;
+        totalWriteOperations = 0;
     }
 
     public BlockOfMemory loadToBuffer(DiskFile file) {
@@ -29,10 +31,9 @@ public class RAM {
             bufferIndex += 4;
         }
 
-        totalReadOperations++;
-
         // If we’ve read data, return a new BlockOfMemory
         if (bufferIndex > 0) {
+            totalReadOperations++;
             return new BlockOfMemory(buffer, bufferIndex);
         } else {
             return null; // No more data to read
@@ -41,6 +42,10 @@ public class RAM {
 
 
     public void writeToFile(DiskFile file, BlockOfMemory _blockOfMemory) {
+        if (_blockOfMemory == null) {
+            return;
+        }
+
         try {
             DataOutputStream outputStream = new DataOutputStream(file.getFileOutputStream());
             byte[] data = _blockOfMemory.getBuffer();
@@ -146,6 +151,14 @@ public class RAM {
 
     public int getTotalWriteOperations() {
         return totalWriteOperations;
+    }
+
+    public void decrementTotalReadOperations() {
+        totalReadOperations--;
+    }
+
+    public void decrementTotalWriteOperations() {
+        totalWriteOperations--;
     }
 
 }

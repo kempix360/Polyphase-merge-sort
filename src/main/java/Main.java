@@ -17,11 +17,12 @@ public class Main {
         String tape2File = "disk_files\\tape2.in";
         PolyphaseSort polyphaseSort = new PolyphaseSort(inputFile, tape1File, tape2File, ram);
         new FileWriter(inputFile).close();
-        new FileWriter(tape1File).close();
-        new FileWriter(tape2File).close();
 
         generateDataToFile(inputFile);
         polyphaseSort.sort();
+
+        new FileWriter(tape1File).close();
+        new FileWriter(tape2File).close();
     }
 
 
