@@ -5,6 +5,8 @@ import memory.DiskFile;
 
 import java.io.*;
 import java.util.Objects;
+import java.nio.file.*;
+import java.util.stream.Stream;
 
 class PolyphaseSort {
     private final String fileToSortPath;
@@ -35,11 +37,13 @@ class PolyphaseSort {
         System.out.println("\n---------------------------------");
         System.out.println(YELLOW + "Data before sort:" + RESET);
         initialNumOfRuns = printFile(fileToSortPath);
+        System.out.println("\n---------------------------------");
+        System.out.println(CYAN + "Sorting in progress..." + RESET);
 
         divideIntoTapes();
 
         while (tape1.getRunCount() + tape2.getRunCount() + tape3.getRunCount() != 1) {
-            mergeTapes(tape1, tape2, tape3);
+            mergeTapes();
             // Swap the tapes for the next phase
             DiskFile temp;
             if (tape1.getRunCount() > tape2.getRunCount()) {
@@ -173,23 +177,24 @@ class PolyphaseSort {
     }
 
 
-    public void mergeTapes(DiskFile firstTape, DiskFile secondTape, DiskFile _tapeToWriteTo) throws IOException {
+    public void mergeTapes() throws IOException {
         // Buffers for reading from tapes and writing to the output tape
-        firstTape.resetFileInputStream();
-        secondTape.resetFileInputStream();
-        firstTape.resetScanner();
-        secondTape.resetScanner();
-        int numOfReadsTape1 = 0, numOfReadsTape2 = 0;
+        tape1.resetFileInputStream();
+        tape2.resetFileInputStream();
+        tape1.resetScanner();
+        tape2.resetScanner();
+        tape3.resetFileOutputStream();
 
-        blockTape1 = ram.loadToBuffer(firstTape);
+        int numOfReadsTape1 = 0, numOfReadsTape2 = 0;
+        int prevAreaTape1, prevAreaTape2;
+        int numOfRuns = Math.min(tape1.getRunCount(), tape2.getRunCount());
+
+        blockTape1 = ram.loadToBuffer(tape1);
         numOfReadsTape1++;
-        blockTape2 = ram.loadToBuffer(secondTape);
+        blockTape2 = ram.loadToBuffer(tape2);
         numOfReadsTape2++;
         blockTape3 = new BlockOfMemory();
-        _tapeToWriteTo.resetFileOutputStream();
 
-        int prevAreaTape1, prevAreaTape2;
-        int numOfRuns = Math.min(firstTape.getRunCount(), secondTape.getRunCount());
 
         Record record1, record2;
         // Fetch the first records from the tapes
@@ -215,12 +220,12 @@ class PolyphaseSort {
                     isEndRun2 = true;
                 }
                 if (isEndRun2 || (!isEndRun1 && record1.getArea() <= record2.getArea())) {
-                    writeNextRecord(_tapeToWriteTo, record1);
+                    writeNextRecord(tape3, record1);
                     prevAreaTape1 = record1.getArea();
 
                     // read next record from tape1 and reload block if needed
                     if (blockTape1 != null && blockTape1.getIndex() >= blockTape1.getSize()) {
-                        blockTape1 = ram.loadToBuffer(firstTape);
+                        blockTape1 = ram.loadToBuffer(tape1);
                         if (blockTape1 != null) {
                             blockTape1.setIndex(0);
                             numOfReadsTape1++;
@@ -233,12 +238,12 @@ class PolyphaseSort {
                         isEndRun1 = true;
                     }
                 } else {
-                    writeNextRecord(_tapeToWriteTo, record2);
+                    writeNextRecord(tape3, record2);
                     prevAreaTape2 = record2.getArea();
 
                     // read next record from tape2 and reload block if needed
                     if (blockTape2 != null && blockTape2.getIndex() >= blockTape2.getSize()) {
-                        blockTape2 = ram.loadToBuffer(secondTape);
+                        blockTape2 = ram.loadToBuffer(tape2);
                         if (blockTape2 != null) {
                             blockTape2.setIndex(0);
                             numOfReadsTape2++;
@@ -252,14 +257,14 @@ class PolyphaseSort {
                     }
                 }
             }
-            firstTape.decrementRunCount();
-            secondTape.decrementRunCount();
+            tape1.decrementRunCount();
+            tape2.decrementRunCount();
             tape3.incrementRunCount();
         }
 
         // Write any remaining data in the output buffer to the tape
         if (blockTape3.getSize() > 0) {
-            ram.writeToFile(_tapeToWriteTo, blockTape3);
+            ram.writeToFile(tape3, blockTape3);
         }
 
         int recordsPerBlock = BlockOfMemory.BUFFER_SIZE / Record.RECORD_SIZE;
@@ -267,20 +272,20 @@ class PolyphaseSort {
         int totalRecordsProcessedTape2 = numOfReadsTape2 * recordsPerBlock;
         String tempFileName = "temp.in";
         DiskFile tempDiskFile = new DiskFile(tempFileName);
-        DiskFile tapeToOverwrite = (firstTape.getRunCount() > 0) ? firstTape : secondTape;
+        DiskFile tapeToOverwrite = (tape1.getRunCount() > 0) ? tape1 : tape2;
 
-        if (blockTape1 != null && firstTape.getRunCount() > 0) {
+        if (blockTape1 != null && tape1.getRunCount() > 0) {
             if (blockTape1.getIndex() != 0) blockTape1.setIndex(blockTape1.getIndex() - Record.RECORD_SIZE);
             ram.writeToFile(tempDiskFile, blockTape1);
             copyRemainingRecords(tapeToOverwrite, tempDiskFile, totalRecordsProcessedTape1);
         }
-        else firstTape.resetFileOutputStream();
-        if (blockTape2 != null && secondTape.getRunCount() > 0) {
+        else tape1.resetFileOutputStream();
+        if (blockTape2 != null && tape2.getRunCount() > 0) {
             if (blockTape2.getIndex() != 0) blockTape2.setIndex(blockTape2.getIndex() - Record.RECORD_SIZE);
             ram.writeToFile(tempDiskFile, blockTape2);
             copyRemainingRecords(tapeToOverwrite, tempDiskFile, totalRecordsProcessedTape2);
         }
-        else secondTape.resetFileOutputStream();
+        else tape2.resetFileOutputStream();
 
         writeContentToAnotherFile(tapeToOverwrite.getFilename(), tempFileName);
     }
@@ -326,22 +331,21 @@ class PolyphaseSort {
     }
 
     private void copyRemainingRecords(DiskFile sourceTape, DiskFile targetTape, int startLine) throws IOException {
-        try (
-                BufferedReader reader = new BufferedReader(new FileReader(sourceTape.getFilename()));
-                BufferedWriter writer = new BufferedWriter(new FileWriter(targetTape.getFilename(), true))
-        ) {
-            String line;
-            int currentLine = 0;
+        Path sourcePath = Paths.get(sourceTape.getFilename());
+        Path targetPath = Paths.get(targetTape.getFilename());
 
-            while ((line = reader.readLine()) != null) {
-                if (currentLine >= startLine) {
+        try (
+                Stream<String> lines = Files.lines(sourcePath);
+                BufferedWriter writer = Files.newBufferedWriter(targetPath, StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+        ) {
+            lines.skip(startLine).forEach(line -> {
+                try {
                     writer.write(line);
                     writer.newLine();
-                    writer.flush();
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
                 }
-                currentLine++;
-            }
-
+            });
         }
     }
 
