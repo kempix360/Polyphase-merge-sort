@@ -10,7 +10,7 @@ public class KeyboardDataGenerator implements DataGenerator {
     public void generateData(String filename, int n) throws IOException {
         Scanner scanner = new Scanner(System.in);
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
-            System.out.print("Enter 3 dimensions of a rectangular prism in separate lines:");
+            System.out.print("Enter 3 dimensions separated by spaces, each set in separate lines:");
             for (int i = 0; i < n; i++) {
                 int number = scanner.nextInt();
                 writer.write(Integer.toString(number));

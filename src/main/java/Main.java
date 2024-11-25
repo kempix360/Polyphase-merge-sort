@@ -3,7 +3,6 @@ import data.FileDataGenerator;
 import data.KeyboardDataGenerator;
 import data.RandomDataGenerator;
 import memory.RAM;
-import memory.Record;
 
 import java.io.*;
 import java.util.InputMismatchException;

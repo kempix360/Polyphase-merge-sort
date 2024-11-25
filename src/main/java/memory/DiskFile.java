@@ -27,7 +27,7 @@ public class DiskFile {
 
     public void resetFileInputStream() throws IOException {
         if (this.fileInputStream != null) { this.fileInputStream.close(); }
-        this.fileInputStream = new FileInputStream(filename);;
+        this.fileInputStream = new FileInputStream(filename);
     }
 
     public FileOutputStream getFileOutputStream() {
@@ -36,7 +36,7 @@ public class DiskFile {
 
     public void resetFileOutputStream() throws IOException {
         if (this.fileOutputStream != null) { this.fileOutputStream.close(); }
-        this.fileOutputStream = new FileOutputStream(filename);;
+        this.fileOutputStream = new FileOutputStream(filename);
     }
 
     public Scanner getScanner() {

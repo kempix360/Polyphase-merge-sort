@@ -13,12 +13,12 @@ class PolyphaseSort {
     private DiskFile tape1;
     private DiskFile tape2;
     private DiskFile tape3;
+    private BlockOfMemory blockTape1;
+    private BlockOfMemory blockTape2;
+    private BlockOfMemory blockTape3;
     private final RAM ram;
     private int phaseCount = 0;
     private int initialNumOfRuns;
-    private BlockOfMemory blockTape3;
-    private BlockOfMemory blockTape1;
-    private BlockOfMemory blockTape2;
 
     public PolyphaseSort(String _inputTape, String tape1File, String tape2File, RAM _ram) throws IOException {
         fileToSortPath = _inputTape;
@@ -41,6 +41,8 @@ class PolyphaseSort {
         System.out.println(CYAN + "Sorting in progress..." + RESET);
 
         divideIntoTapes();
+        System.out.println("Initial distribution completed. Read operations: "
+                + ram.getTotalReadOperations() + ", Write operations: " + ram.getTotalWriteOperations());
 
         while (tape1.getRunCount() + tape2.getRunCount() + tape3.getRunCount() != 1) {
             mergeTapes();
@@ -59,6 +61,8 @@ class PolyphaseSort {
 
             System.out.println("Phase " + phaseCount + " completed. Read operations: "
                     + ram.getTotalReadOperations() + ", Write operations: " + ram.getTotalWriteOperations());
+            System.out.println("Number of runs on tape 1: " + tape1.getRunCount());
+            System.out.println("Number of runs on tape 2: " + tape2.getRunCount());
 
 //            while (true) {
 //                System.out.println("Do you want to print the content of the tapes? (y/n)");
@@ -267,6 +271,7 @@ class PolyphaseSort {
             ram.writeToFile(tape3, blockTape3);
         }
 
+        // overwrite the tape with the remaining records
         int recordsPerBlock = BlockOfMemory.BUFFER_SIZE / Record.RECORD_SIZE;
         int totalRecordsProcessedTape1 = numOfReadsTape1 * recordsPerBlock;
         int totalRecordsProcessedTape2 = numOfReadsTape2 * recordsPerBlock;

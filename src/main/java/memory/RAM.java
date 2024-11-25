@@ -153,12 +153,4 @@ public class RAM {
         return totalWriteOperations;
     }
 
-    public void decrementTotalReadOperations() {
-        totalReadOperations--;
-    }
-
-    public void decrementTotalWriteOperations() {
-        totalWriteOperations--;
-    }
-
 }
