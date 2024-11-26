@@ -64,24 +64,27 @@ class PolyphaseSort {
             System.out.println("Number of runs on tape 1: " + tape1.getRunCount());
             System.out.println("Number of runs on tape 2: " + tape2.getRunCount());
 
-//            while (true) {
-//                System.out.println("Do you want to print the content of the tapes? (y/n)");
-//                BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-//                String answer = reader.readLine();
-//                if (answer.equals("y")) {
-//                    System.out.println("\n---------------------------------");
-//                    System.out.println(YELLOW + "Data after phase " + phaseCount + ":" + RESET);
-//                    printFile(tape1.getFilename());
-//                    printFile(tape2.getFilename());
-//                    printFile(tape3.getFilename());
-//                    System.out.println("\n---------------------------------");
-//                    break;
-//                } else if (answer.equals("n")) {
-//                    break;
-//                } else {
-//                    System.out.println("Invalid input. Please enter 'y' or 'n'.");
-//                }
-//            }
+            while (true) {
+                System.out.println("Do you want to print the content of the tapes? (y/n)");
+                BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+                String answer = reader.readLine();
+                if (answer.equals("y")) {
+                    System.out.println("\n---------------------------------");
+                    System.out.println(YELLOW + "Data after phase " + phaseCount + ":" + RESET);
+                    System.out.println("Tape 1:");
+                    printFile(tape1.getFilename());
+                    System.out.println("Tape 2:");
+                    printFile(tape2.getFilename());
+                    System.out.println("Tape 3:");
+                    printFile(tape3.getFilename());
+                    System.out.println("\n---------------------------------");
+                    break;
+                } else if (answer.equals("n")) {
+                    break;
+                } else {
+                    System.out.println("Invalid input. Please enter 'y' or 'n'.");
+                }
+            }
         }
 
         DiskFile finalTape = (tape1.getRunCount() == 1) ? tape1 : tape2;
@@ -353,7 +356,6 @@ class PolyphaseSort {
             });
         }
     }
-
 
     public void writeContentToAnotherFile(String file1, String file2) throws IOException {
         File fileToOverwrite = new File(file1);
